@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Vocabolario</title>
+  <style>
+    #progress-bar {
+      width: 200px;
+      height: 20px;
+      background-color: #ccc;
+      border-radius: 10px;
+    }
+    #progress-bar-fill {
+      height: 20px;
+      background-color: #4CAF50;
+      border-radius: 10px;
+    }
+    #file-input-label {
+      font-size: 18px;
+      padding: 10px 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #group-list {
+      font-size: 18px;
+      padding: 10px 20px;
+    }
+    #prev-card, #next-card {
+      font-size: 24px;
+      padding: 15px 30px;
+      width: auto;
+      height: auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Vocabolario</h1>
+  <p style="text-align: center;">Hai trovato una parola sbagliata? Invia un'email a </p>
+  <a href="mailto:rodns01@gmail.com?subject=Correzione"><p style="text-align:center">rodns01@gmail.com</p></a>
+
+  <label for="file-input" id="file-input-label">Caricare</label>
+  <input type="file" id="file-input" style="display: none;" accept=".txt">
+  <div id="progress-bar">
+    <div id="progress-bar-fill" style="width: 0%;"></div>
+  </div>
+  <p id="progress-text">0.00%</p>
+  <select id="group-list"></select>
+  <button id="prev-card">precedente</button>
+  <button id="next-card">successivo</button>
+  <div id="card"></div>
+  <script>
+    // Código JavaScript aqui...
+    let flashcards = {};
+    let currentGroup = null;
+    let currentCardIndex = 0;
+    let lezione = null;
+
+    function loadFlashcards(file) {
+      let reader = new FileReader();
+      reader.onload = function(event) {
+        let txt = event.target.result;
+        let lines = txt.split("\n");
+        let vocabolario = lines[0].trim();
+        lezione = lines[1].trim();
+
+        document.title = vocabolario;
+        document.querySelector("h1").innerText = vocabolario;
+
+        txt = txt.replace(/Vocabolario/g, vocabolario);
+        txt = txt.replace(/Lezione/g, lezione);
+
+        let group = null;
+        let groupName = null;
+        lines = txt.split("\n");
+        flashcards = {};
+        let newFlashcards = {};
+        lines.forEach(line => {
+          if (line.match(/^(Lezione|Grupo)/)) {
+            group = line.trim();
+            let groupNumber = line.trim().replace("Grupo", "").replace("Lezione", "");
+            groupName = lezione + groupNumber;
+            flashcards[group] = [];
+            newFlashcards[groupName] = [];
+          } else if (group && line.trim() !== "") {
+            let sides = line.split("-");
+            if (sides.length === 2) {
+              flashcards[group].push({ pergunta: sides[0].trim(), resposta: sides[1].trim() });
+              newFlashcards[groupName].push({ pergunta: sides[0].trim(), resposta: sides[1].trim() });
+            }
+          }
+        });
+        flashcards = newFlashcards;
+        showGroups();
+      };
+      reader.readAsText(file);
+    }
+
+    function showGroups() {
+      let groupList = document.getElementById("group-list");
+      groupList.innerHTML = "";
+      Object.keys(flashcards).forEach(group => {
+        let option = document.createElement("option");
+        option.value = group;
+        option.text = group;
+        groupList.appendChild(option);
+      });
+      document.getElementById("group-list").onchange = showFlashcards;
+      showFlashcards();
+    }
+
+    function showFlashcards() {
+      currentGroup = document.getElementById("group-list").value;
+      currentCardIndex = 0;
+      showCard();
+    }
+
+    function showCard() {
+      let card = flashcards[currentGroup][currentCardIndex];
+      let progresso = ((currentCardIndex + 1) / flashcards[currentGroup].length) * 100;
+      document.getElementById("progress-bar-fill").style.width = `${progresso}%`;
+      document.getElementById("progress-text").innerText = `${progresso.toFixed(2)}%`;
+      document.getElementById("card").innerHTML = `
+        <div style="background-color: yellow; padding: 20px; text-align: center; font-size: 72px; width: 40%; margin: 40px auto;">
+          <p>${card.pergunta}</p>
+          <button onclick="showAnswer()" style="font-size: 36px;">Risposta</button>
+          <div id="answer" style="max-height: 0; overflow: hidden; transition: max-height 0.5s ease-out; font-size: 72px;">${card.resposta}</div>
+        </div>
+      `;
+    }
+
+    function showAnswer() {
+      let answer = document.getElementById("answer");
+      if (answer.style.maxHeight === "0px" || answer.style.maxHeight === "") {
+        answer.style.maxHeight = "500px";
+        answer.style.transition = "max-height 0.5s ease-in";
+      } else {
+        answer.style.maxHeight = "0px";
+        answer.style.transition = "max-height 0.5s ease-out";
+      }
+    }
+
+    function nextCard() {
+      currentCardIndex++;
+      if (currentCardIndex >= flashcards[currentGroup].length) {
+        let groups = Object.keys(flashcards);
+        let currentIndex = groups.indexOf(currentGroup);
+        if (currentIndex === groups.length - 1) {
+          currentIndex = 0;
+        } else {
+          currentIndex++;
+        }
+        currentGroup = groups[currentIndex];
+        currentCardIndex = 0;
+        document.getElementById("group-list").value = currentGroup;
+      }
+      showCard();
+    }
+
+    function prevCard() {
+      currentCardIndex--;
+      if (currentCardIndex < 0) {
+        let groups = Object.keys(flashcards);
+        let currentIndex = groups.indexOf(currentGroup);
+        if (currentIndex === 0) {
+          currentIndex = groups.length - 1;
+        } else {
+          currentIndex--;
+        }
+        currentGroup = groups[currentIndex];
+        currentCardIndex = flashcards[currentGroup].length - 1;
+        document.getElementById("group-list").value = currentGroup;
+      }
+      showCard();
+    }
+
+    document.getElementById("file-input").addEventListener("change", function(event) {
+      loadFlashcards(event.target.files[0]);
+    });
+
+    document.getElementById("next-card").onclick = nextCard;
+    document.getElementById("prev-card").onclick = prevCard;
+  </script>
+</body>
+</html>
