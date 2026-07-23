@@ -9,8 +9,20 @@
           async src="//gc.zgo.at/count.js"></script>
   
   <!-- Cloudflare Web Analytics -->
-  <script defer src='https://static.cloudflareinsights.com/beacon.min.js' 
-  data-cf-beacon='{"token": "39b4591dd3e24cd2bb9b5432d07721d4"}'></script>
+  <script>
+  // Pega IP via um serviço público
+  fetch('https://api.ipify.org?format=json')
+    .then(res => res.json())
+    .then(data => {
+      if (data.ip !== "191.191.108.65") {
+        var s = document.createElement('script');
+        s.defer = true;
+        s.src = 'https://static.cloudflareinsights.com/beacon.min.js';
+        s.setAttribute('data-cf-beacon', '{"token": "39b4591dd3e24cd2bb9b5432d07721d4"}');
+        document.head.appendChild(s);
+      }
+    });
+  </script>
   
   <title>Meu GitHub</title>
   <style>
